@@ -3,7 +3,7 @@ using UnityEngine.Rendering;
 using System.Runtime.InteropServices;
 
 [ExecuteAlways]
-public class MeshGrassIndirect : MonoBehaviour
+public class DenseGrassRenderer : MonoBehaviour
 {
     [Header("References")]
     public MeshFilter terrainMeshFilter;
@@ -15,6 +15,9 @@ public class MeshGrassIndirect : MonoBehaviour
     public Vector2 heightRange = new Vector2(0.7f, 1.4f);
     [Range(0f, 1f)] public float alignToNormal = 0.5f;
     [Range(0f, 1f)] public float maxSlope = 0.7f;
+    [SerializeField] private LayerMask grassObstructorLayer;
+    [Tooltip("Minimum distance a grass obstructor must be from the ground for grass to spawn")]
+    [Range(0.1f, 5f)] public float minDistance;
 
     private Mesh _quadMesh;
     private GraphicsBuffer _commandBuffer;
@@ -36,7 +39,7 @@ public class MeshGrassIndirect : MonoBehaviour
     {
         if (terrainMeshFilter == null || terrainMeshFilter.sharedMesh == null || grassMaterial == null)
         {
-            Debug.LogError("MeshGrassIndirect: Missing Terrain MeshFilter or Grass Material.");
+            Debug.LogError("DenseGrassRenderer: Missing Terrain MeshFilter or Grass Material.");
             return;
         }
 
@@ -45,7 +48,7 @@ public class MeshGrassIndirect : MonoBehaviour
 
         if (spawnedCount == 0)
         {
-            Debug.LogWarning("MeshGrassIndirect: 0 instances generated. Check maxSlope or terrain mesh normals.");
+            Debug.LogWarning("DenseGrassRenderer: 0 instances generated. Check maxSlope or terrain mesh normals.");
             return;
         }
 
@@ -107,6 +110,8 @@ public class MeshGrassIndirect : MonoBehaviour
         int maxAttempts = instanceCount * 4;
         int attempts = 0;
 
+        Physics.queriesHitBackfaces = true; // Need to be able to have rays hit backs of faces
+
         while (validCount < instanceCount && attempts < maxAttempts)
         {
             attempts++;
@@ -133,6 +138,11 @@ public class MeshGrassIndirect : MonoBehaviour
 
             Vector3 localPos = vertices[i0] * w0 + vertices[i1] * w1 + vertices[i2] * w2;
             Vector3 worldPos = terrainTransform.TransformPoint(localPos);
+
+            if (Physics.Raycast(worldPos, Vector3.up, out RaycastHit hit, minDistance, grassObstructorLayer))
+            {
+                continue;
+            }
 
             instances[validCount] = new GrassInstance
             {
