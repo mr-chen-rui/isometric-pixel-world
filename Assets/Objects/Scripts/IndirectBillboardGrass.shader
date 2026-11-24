@@ -78,28 +78,20 @@ Shader "Custom/IndirectBillboardGrass"
                 Varyings output;
                 GrassInstance inst = _GrassInstances[input.instanceID];
 
-                // 1. Scale quad locally
+                // Scale quad locally
                 float3 pos = input.positionOS.xyz;
                 pos.x *= inst.scale.x;
                 pos.y *= inst.scale.y;
-
-                // 2. Cylindrical (Y-Axis) Billboarding toward the camera
-                // Use the blended terrain normal as the blade's up axis
-                float3 up = normalize(inst.normal);
-
-                // Vector from grass root to camera
-                float3 toCamera = _WorldSpaceCameraPos - inst.position;
                 
-                // Project onto the plane perpendicular to 'up' so the quad doesn't tilt backward when looking down
-                float3 forward = toCamera - up * dot(toCamera, up);
-                float forwardLen = length(forward);
-                forward = (forwardLen > 0.0001) ? (forward / forwardLen) : float3(0, 0, 1);
+                // Billboard the quad
+                float3 forward = normalize(_WorldSpaceCameraPos - inst.position);
 
-                // Compute right vector to form an orthonormal basis
-                float3 right = normalize(cross(up, forward));
+                float3 camera_up = UNITY_MATRIX_V[1].xyz;
+
+                float3 right = normalize(cross(camera_up, forward));
 
                 // Transform local quad vertex into camera-facing world space
-                float3 worldPos = inst.position + (right * pos.x) + (up * pos.y);
+                float3 worldPos = inst.position + (right * pos.x) + (camera_up * pos.y) + (forward * pos.z);
 
                 // 3. Apply world-space wind AFTER billboarding (weighted by uv.y^2 so roots stay planted)
                 float windPhase = _Time.y * _WindSpeed + (inst.position.x + inst.position.z) * _WindFrequency;
@@ -110,7 +102,7 @@ Shader "Custom/IndirectBillboardGrass"
                 output.positionWS = worldPos;
                 output.positionCS = TransformWorldToHClip(worldPos);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
-                output.normalWS = up;
+                output.normalWS = normalize(inst.normal);
 
                 return output;
             }
