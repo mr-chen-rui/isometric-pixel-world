@@ -15,6 +15,8 @@ public class DenseGrassRenderer : MonoBehaviour
     public Vector2 heightRange = new Vector2(0.7f, 1.4f);
     [Range(0f, 1f)] public float alignToNormal = 0.5f;
     [Range(0f, 1f)] public float maxSlope = 0.7f;
+
+    [Range(0f, 1f)] public float modulateScale = 1;
     [SerializeField] private LayerMask grassObstructorLayer;
     [Tooltip("Minimum distance a grass obstructor must be from the ground for grass to spawn")]
     [Range(0.1f, 5f)] public float minDistance;
@@ -33,6 +35,7 @@ public class DenseGrassRenderer : MonoBehaviour
         public float randomSeed;
         public Vector3 normal;
         public Vector2 scale;
+        public float modulate;
     }
 
     void OnEnable()
@@ -152,7 +155,8 @@ public class DenseGrassRenderer : MonoBehaviour
                 scale = new Vector2(
                     Random.Range(widthRange.x, widthRange.y),
                     Random.Range(heightRange.x, heightRange.y)
-                )
+                ),
+                modulate = Mathf.PerlinNoise(worldPos.x * modulateScale, worldPos.z * modulateScale) // Passing modulate value to shader
             };
             validCount++;
         }

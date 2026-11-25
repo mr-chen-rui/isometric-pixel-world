@@ -41,6 +41,7 @@ Shader "Custom/IndirectBillboardGrass"
                 float rotationY;
                 float3 normal;
                 float2 scale;
+                float modulate;
             };
 
             StructuredBuffer<GrassInstance> _GrassInstances;
@@ -71,6 +72,7 @@ Shader "Custom/IndirectBillboardGrass"
                 float2 uv : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float3 positionWS : TEXCOORD2;
+                uint instanceID : SV_InstanceID;
             };
 
             Varyings vert(Attributes input)
@@ -103,17 +105,19 @@ Shader "Custom/IndirectBillboardGrass"
                 output.positionCS = TransformWorldToHClip(worldPos);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.normalWS = normalize(inst.normal);
+                output.instanceID = input.instanceID;
 
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
+                GrassInstance inst = _GrassInstances[input.instanceID];
                 half4 texColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
                 clip(texColor.a - _Cutoff);
 
                 half3 tint = lerp(_BaseColor.rgb, _TipColor.rgb, input.uv.y);
-                half3 albedo = texColor.rgb * tint;
+                half3 albedo = texColor.rgb * tint * clamp(inst.modulate, 0.5, 1);
 
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(input.positionWS));
                 half NdotL = saturate(dot(input.normalWS, mainLight.direction) * 0.5 + 0.5);
